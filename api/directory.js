@@ -9,8 +9,9 @@ export default async function handler(req, res) {
   const base = 'https://jbnphilly.outseta.com/api/v1';
 
   try {
+    // Fetch people
     const peopleRes = await fetch(
-      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account,PersonAccount.Account.Name,PersonAccount.Account.Address,PersonAccount.Account.Industry`,
+      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*`,
       { headers: { Authorization: auth } }
     );
     const peopleData = await peopleRes.json();
