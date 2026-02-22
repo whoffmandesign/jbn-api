@@ -9,9 +9,8 @@ export default async function handler(req, res) {
   const base = 'https://jbnphilly.outseta.com/api/v1';
 
   try {
-    // Fetch people
     const peopleRes = await fetch(
-      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*`,
+      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus`,
       { headers: { Authorization: auth } }
     );
     const peopleData = await peopleRes.json();
@@ -27,6 +26,17 @@ export default async function handler(req, res) {
         Title: p.Title,
         ProfileImageS3Url: p.ProfileImageS3Url,
         Tags: p.Tags || [],
+        Bio: p.Bio || null,
+        CompanyName: p.CompanyName || null,
+        City: p.City || null,
+        State: p.State || null,
+        Country: p.Country || null,
+        DirectoryCategories: p.DirectoryCategories || null,
+        LinkedInUrl: p.LinkedInUrl || null,
+        Website: p.Website || null,
+        PhoneNumber: p.PhoneNumber || null,
+        PublicDirectoryListing: p.PublicDirectoryListing || null,
+        MembershipStatus: p.MembershipStatus || null,
         Account: account || null
       };
     });
