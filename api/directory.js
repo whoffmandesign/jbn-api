@@ -10,15 +10,23 @@ export default async function handler(req, res) {
 
   try {
     const peopleRes = await fetch(
-      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus`,
+      // ✅ Added Email so we can encode it server-side
+      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus`,
       { headers: { Authorization: auth } }
     );
+
     const peopleData = await peopleRes.json();
     const people = peopleData.items || [];
 
-    const merged = people.map(function(p) {
+    const merged = people.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
       const account = personAccount && personAccount.Account;
+
+      // ✅ Base64 encode email so it isn't visible in HTML/source
+      const emailB64 = p.Email
+        ? Buffer.from(String(p.Email), 'utf8').toString('base64')
+        : null;
+
       return {
         Uid: p.Uid,
         FirstName: p.FirstName,
@@ -37,13 +45,16 @@ export default async function handler(req, res) {
         PhoneNumber: p.PhoneNumber || null,
         PublicDirectoryListing: p.PublicDirectoryListing || null,
         MembershipStatus: p.MembershipStatus || null,
+
+        // ✅ New field used by the profile page button
+        EmailB64: emailB64,
+
         Account: account || null
       };
     });
 
     res.status(200).json({ items: merged });
-
-  } catch(e) {
+  } catch (e) {
     res.status(500).json({ error: e.message });
   }
 }
