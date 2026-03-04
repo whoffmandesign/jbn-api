@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   try {
     const peopleRes = await fetch(
       // ✅ Added Email so we can encode it server-side
-      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus`,
+      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus,Education,Specialization,OtherOrganizations,AdditionalPairingInfo`,
       { headers: { Authorization: auth } }
     );
 
@@ -46,6 +46,10 @@ export default async function handler(req, res) {
         PublicDirectoryListing: p.PublicDirectoryListing || null,
         MembershipStatus: p.MembershipStatus || null,
         AvailabilityStatus: p.AvailabilityStatus || null,
+        Education: p.Education || null,
+        Specialization: p.Specialization || null,
+        OtherOrganizations: p.OtherOrganizations || null,
+        AdditionalPairingInfo: p.AdditionalPairingInfo || null,
 
         // ✅ New field used by the profile page button
         EmailB64: emailB64,
