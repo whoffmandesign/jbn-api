@@ -51,11 +51,15 @@ export default async function handler(req, res) {
         OtherOrganizations: p.OtherOrganizations || null,
         AdditionalPairingInfo: p.AdditionalPairingInfo || null,
 
-        // ✅ Mentor flag derived server-side from Tags
-        IsMentor: Array.isArray(p.Tags) && p.Tags.some(function(t) {
-          var name = (t && (t.Name || t.name || t.Label || t.label || String(t))) || '';
-          return name.toLowerCase() === 'mentor';
-        }),
+        // ✅ Mentor flag: plan UID (signup flow) OR mentor availability status (imported)
+        IsMentor: (function() {
+          var planUid = account && account.CurrentSubscription && account.CurrentSubscription.Plan && account.CurrentSubscription.Plan.Uid;
+          if (planUid === '1Qpekp9E') return true;
+          var av = p.AvailabilityStatus;
+          var statuses = Array.isArray(av) ? av : (av ? [av] : []);
+          var mentorStatuses = ['open to mentoring','accepting new mentees','by referral only','not currently mentoring'];
+          return statuses.some(function(s) { return mentorStatuses.indexOf(String(s).toLowerCase().trim()) !== -1; });
+        })(),
 
         // ✅ New field used by the profile page button
         EmailB64: emailB64,
