@@ -56,7 +56,13 @@ export default async function handler(req, res) {
           var planUid = account && account.CurrentSubscription && account.CurrentSubscription.Plan && account.CurrentSubscription.Plan.Uid;
           if (planUid === '1Qpekp9E') return true;
           var av = p.AvailabilityStatus;
-          var statuses = Array.isArray(av) ? av : (av ? [av] : []);
+          var statuses = [];
+          try {
+            var parsed = typeof av === 'string' ? JSON.parse(av) : av;
+            statuses = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+          } catch(e) {
+            statuses = av ? [av] : [];
+          }
           var mentorStatuses = ['open to mentoring','accepting new mentees','by referral only','not currently mentoring'];
           return statuses.some(function(s) { return mentorStatuses.indexOf(String(s).toLowerCase().trim()) !== -1; });
         })(),
