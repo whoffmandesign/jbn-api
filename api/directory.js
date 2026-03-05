@@ -17,6 +17,7 @@ export default async function handler(req, res) {
 
     const peopleData = await peopleRes.json();
     const people = peopleData.items || [];
+    if (people.length) console.log('Sample person raw:', JSON.stringify(people[0]));
 
     const merged = people.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
