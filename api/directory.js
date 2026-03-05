@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   try {
     const peopleRes = await fetch(
       // ✅ Added Email so we can encode it server-side
-      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus,Education,Specialization,OtherOrganizations,AdditionalPairingInfo`,
+      `${base}/crm/people?limit=200&fields=Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,MailingAddress,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus,Education,Specialization,OtherOrganizations,AdditionalPairingInfo`,
       { headers: { Authorization: auth } }
     );
 
@@ -37,9 +37,9 @@ export default async function handler(req, res) {
         Tags: p.Tags || [],
         Bio: p.Bio || null,
         CompanyName: p.CompanyName || null,
-        City: p.City || null,
-        State: p.State || null,
-        Country: p.Country || null,
+        City: p.City || (p.MailingAddress && p.MailingAddress.City) || null,
+        State: p.State || (p.MailingAddress && p.MailingAddress.State) || null,
+        Country: p.Country || (p.MailingAddress && p.MailingAddress.Country) || null,
         DirectoryCategories: p.DirectoryCategories || null,
         LinkedInUrl: p.LinkedInUrl || null,
         Website: p.Website || null,
