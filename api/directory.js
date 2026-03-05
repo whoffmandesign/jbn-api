@@ -51,6 +51,12 @@ export default async function handler(req, res) {
         OtherOrganizations: p.OtherOrganizations || null,
         AdditionalPairingInfo: p.AdditionalPairingInfo || null,
 
+        // ✅ Mentor flag derived server-side from Tags
+        IsMentor: Array.isArray(p.Tags) && p.Tags.some(function(t) {
+          var name = (t && (t.Name || t.name || t.Label || t.label || String(t))) || '';
+          return name.toLowerCase() === 'mentor';
+        }),
+
         // ✅ New field used by the profile page button
         EmailB64: emailB64,
 
