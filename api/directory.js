@@ -36,8 +36,8 @@ export default async function handler(req, res) {
     const peopleData = await peopleRes.json();
     let people = peopleData.items || [];
     if (people.length > 0) {
-      console.log('METADATA:', JSON.stringify(peopleData.metadata));
-      console.log('PEOPLE_COUNT:', people.length);
+      console.log('TOTAL:', peopleData.metadata && peopleData.metadata.total);
+      console.log('RETURNED:', people.length);
     }
     const total = peopleData.metadata?.total || people.length;
 
