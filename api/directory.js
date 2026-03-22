@@ -35,6 +35,7 @@ export default async function handler(req, res) {
 
     const peopleData = await peopleRes.json();
     let people = peopleData.items || [];
+    if (people.length > 0) console.log('ACCOUNT_SHAPE:', JSON.stringify(people[0].PersonAccount, null, 2));
     const total = peopleData.metadata?.total || people.length;
 
     // Paginate through remaining records if member count exceeds 200
