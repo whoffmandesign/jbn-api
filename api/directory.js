@@ -2,7 +2,7 @@
 // JBN API — /api/directory.js
 // Fetches all members from Outseta CRM and returns a merged, cleaned array.
 // Includes in-memory caching (5 min TTL) and paginated fetching to support
-// member counts beyond 200 without silent truncation.
+// any member count without silent truncation.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // In-memory cache — persists across warm Vercel function invocations
@@ -27,32 +27,29 @@ export default async function handler(req, res) {
   const fields = 'Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus';
 
   try {
-    // Initial fetch — Outseta returns up to 200 records per request
+    // Initial fetch — Outseta defaults to 25 records per page
     const peopleRes = await fetch(
-      `${base}/crm/people?limit=200&fields=${fields}`,
+      `${base}/crm/people?limit=100&fields=${fields}`,
       { headers: { Authorization: auth } }
     );
 
     const peopleData = await peopleRes.json();
     let people = peopleData.items || [];
-    if (people.length > 0) {
-      console.log('TOTAL:', peopleData.metadata && peopleData.metadata.total);
-      console.log('RETURNED:', people.length);
-    }
     const total = peopleData.metadata?.total || people.length;
 
-    // Paginate through remaining records if member count exceeds 200
-    let offset = 200;
+    // Paginate through remaining records using actual returned count as offset
+    // so we don't skip records if Outseta caps the page size below our limit
+    let offset = people.length;
     while (people.length < total) {
       const nextRes = await fetch(
-        `${base}/crm/people?limit=200&offset=${offset}&fields=${fields}`,
+        `${base}/crm/people?limit=100&offset=${offset}&fields=${fields}`,
         { headers: { Authorization: auth } }
       );
       const nextData = await nextRes.json();
       const nextItems = nextData.items || [];
       if (nextItems.length === 0) break;
       people = people.concat(nextItems);
-      offset += 200;
+      offset += nextItems.length; // Increment by what was actually returned
     }
 
     const merged = people.map(function (p) {
