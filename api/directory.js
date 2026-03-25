@@ -30,7 +30,7 @@ const fields = '*';
     // Use "fetch until short page" pagination — no dependency on metadata.total.
     const PAGE_SIZE = 25;
 const firstRes = await fetch(
-  `${base}/crm/people?limit=${PAGE_SIZE}&offset=0&fields=${fields}`,
+  `${base}/crm/accounts?limit=${PAGE_SIZE}&offset=0`,
   { headers: { Authorization: auth } }
 );
 const firstData = await firstRes.json();
@@ -41,7 +41,7 @@ let people = firstData.items || [];
 
 for (let page = 1; page < totalPages; page++) {
   const pageRes = await fetch(
-    `${base}/crm/people?limit=${PAGE_SIZE}&offset=${page}&fields=${fields}`,
+    `${base}/crm/accounts?limit=${PAGE_SIZE}&offset=${page}`,
     { headers: { Authorization: auth } }
   );
   const pageData = await pageRes.json();
@@ -127,7 +127,7 @@ const merged = uniquePeople.map(function (p) {
 });
 
     // Store result in cache before returning
-    const payload = { items: uniquePeople };
+    const payload = { items: people };
     cachedData = payload;
     cacheTimestamp = Date.now();
     res.status(200).json(payload);
