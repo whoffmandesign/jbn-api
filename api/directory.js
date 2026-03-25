@@ -27,14 +27,24 @@ export default async function handler(req, res) {
   const fields = 'Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus';
 
   try {
-   // Fetch all people in one request using OData $top param.
-    // Outseta ignores `limit` beyond 25, but `$top` is the real OData parameter.
-    const peopleRes = await fetch(
-      `${base}/crm/people?$top=200&fields=${fields}`,
-      { headers: { Authorization: auth } }
-    );
-    const peopleData = await peopleRes.json();
-    let people = peopleData.items || [];
+    // Outseta enforces a 25-record page size regardless of the limit param.
+    // Use "fetch until short page" pagination — no dependency on metadata.total.
+    const PAGE_SIZE = 25;
+    let people = [];
+    let offset = 0;
+
+    while (true) {
+      const pageRes = await fetch(
+        `${base}/crm/people?limit=${PAGE_SIZE}&$skip=${offset}&fields=${fields}`,
+        { headers: { Authorization: auth } }
+      );
+      const pageData = await pageRes.json();
+      const pageItems = pageData.items || [];
+      people = people.concat(pageItems);
+      // If we got fewer records than a full page, we've reached the last page
+      if (pageItems.length < PAGE_SIZE) break;
+      offset += pageItems.length;
+    }
 
     const merged = people.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
