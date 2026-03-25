@@ -93,7 +93,7 @@ const merged = uniquePeople.map(function (p) {
     });
 
     // Store result in cache before returning
-    const payload = { items: merged };
+    const payload = { debug: 'v2-test', items: merged };
     cachedData = payload;
     cacheTimestamp = Date.now();
     res.status(200).json(payload);
