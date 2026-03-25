@@ -111,6 +111,7 @@ const merged = uniquePeople.map(function (p) {
     State: p.State || null,
     Country: p.Country || null,
     DirectoryCategories: p.DirectoryCategories || null,
+    DirectoryRole: p.DirectoryRole || null,
     LinkedInUrl: p.LinkedInUrl || null,
     Website: p.Website || null,
     PhoneNumber: p.PhoneNumber || null,
@@ -127,7 +128,7 @@ const merged = uniquePeople.map(function (p) {
 });
 
     // Store result in cache before returning
-    const payload = { items: people };
+    const payload = { items: merged };
     cachedData = payload;
     cacheTimestamp = Date.now();
     res.status(200).json(payload);
