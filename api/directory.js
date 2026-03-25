@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   const auth = 'Outseta ' + process.env.OUTSETA_API_KEY + ':' + process.env.OUTSETA_API_SECRET;
   const base = 'https://jbnphilly.outseta.com/api/v1';
-  const fields = 'Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,PersonAccount.Account.Subscriptions,PersonAccount.Account.CurrentSubscription,Bio,CompanyName,City,State,Country,DirectoryCategories,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus';
+const fields = '*';
   try {
     // Outseta enforces a 25-record page size regardless of the limit param.
     // Use "fetch until short page" pagination — no dependency on metadata.total.
