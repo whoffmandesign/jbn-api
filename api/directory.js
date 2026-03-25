@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
     while (true) {
       const pageRes = await fetch(
-        `${base}/crm/people?limit=${PAGE_SIZE}&$skip=${offset}&fields=${fields}`,
+        `${base}/crm/people?$top=${PAGE_SIZE}&$skip=${offset}&fields=${fields}`
         { headers: { Authorization: auth } }
       );
       const pageData = await pageRes.json();
