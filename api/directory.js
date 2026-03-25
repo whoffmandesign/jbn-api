@@ -46,7 +46,17 @@ export default async function handler(req, res) {
       offset += pageItems.length;
     }
 
-    const merged = people.map(function (p) {
+    const uniquePeople = [];
+const seenUids = new Set();
+
+people.forEach(function (p) {
+  if (!p || !p.Uid) return;
+  if (seenUids.has(p.Uid)) return;
+  seenUids.add(p.Uid);
+  uniquePeople.push(p);
+});
+
+const merged = uniquePeople.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
       const account = personAccount && personAccount.Account;
 
