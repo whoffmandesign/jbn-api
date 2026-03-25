@@ -30,29 +30,35 @@ export default async function handler(req, res) {
     // Outseta enforces a 25-record page size regardless of the limit param.
     // Use "fetch until short page" pagination — no dependency on metadata.total.
     const PAGE_SIZE = 25;
-
-// page 1
 const firstRes = await fetch(
   `${base}/crm/people?limit=${PAGE_SIZE}&offset=0&fields=${fields}`,
   { headers: { Authorization: auth } }
 );
 const firstData = await firstRes.json();
-const firstItems = firstData.items || [];
-const lastUid = firstItems[firstItems.length - 1]?.Uid || null;
+const total = firstData.metadata?.total || 0;
+const totalPages = Math.ceil(total / PAGE_SIZE);
 
-// page 2 test
-let secondItems = [];
-let secondData = null;
-if (lastUid) {
-  const secondRes = await fetch(
-  `${base}/crm/people?limit=${PAGE_SIZE}&offset=1`,
-  { headers: { Authorization: auth } }
-);
-  secondData = await secondRes.json();
-  secondItems = secondData.items || [];
+let people = firstData.items || [];
+
+for (let page = 1; page < totalPages; page++) {
+  const pageRes = await fetch(
+    `${base}/crm/people?limit=${PAGE_SIZE}&offset=${page}&fields=${fields}`,
+    { headers: { Authorization: auth } }
+  );
+  const pageData = await pageRes.json();
+  const pageItems = pageData.items || [];
+  people = people.concat(pageItems);
 }
 
-const uniquePeople = firstItems.concat(secondItems);
+const uniquePeople = [];
+const seenUids = new Set();
+
+people.forEach(function (p) {
+  if (!p || !p.Uid) return;
+  if (seenUids.has(p.Uid)) return;
+  seenUids.add(p.Uid);
+  uniquePeople.push(p);
+});
 
 const merged = uniquePeople.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
@@ -91,18 +97,7 @@ const merged = uniquePeople.map(function (p) {
     });
 
     // Store result in cache before returning
-    const payload = {
-  items: merged,
-  debug: {
-    count: merged.length,
-    firstPageCount: firstItems.length,
-    firstMetadata: firstData.metadata || null,
-    secondPageCount: secondItems.length,
-    secondMetadata: secondData?.metadata || null,
-    secondRawKeys: secondData ? Object.keys(secondData) : [],
-    secondError: secondData?.error || null
-  }
-};
+    const payload = { items: merged };
     cachedData = payload;
     cacheTimestamp = Date.now();
     res.status(200).json(payload);
