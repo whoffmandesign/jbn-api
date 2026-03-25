@@ -94,12 +94,7 @@ const merged = uniquePeople.map(function (p) {
   items: merged,
   debug: {
     count: merged.length,
-    firstPageCount: firstItems.length,
-    firstPageFirstUid: firstItems[0]?.Uid || null,
-    firstPageLastUid: firstItems[firstItems.length - 1]?.Uid || null,
-    secondPageCount: secondItems.length,
-    secondPageFirstUid: secondItems[0]?.Uid || null,
-    secondPageLastUid: secondItems[secondItems.length - 1]?.Uid || null
+    metadata: firstData.metadata || null
   }
 };
     cachedData = payload;
