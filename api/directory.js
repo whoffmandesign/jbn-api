@@ -45,7 +45,7 @@ let secondItems = [];
 let secondData = null;
 if (lastUid) {
   const secondRes = await fetch(
-  `${base}/crm/people?limit=${PAGE_SIZE}&offset=${PAGE_SIZE}`,
+  `${base}/crm/people?limit=${PAGE_SIZE}&offset=1`,
   { headers: { Authorization: auth } }
 );
   secondData = await secondRes.json();
