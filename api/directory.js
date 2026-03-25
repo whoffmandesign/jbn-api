@@ -30,43 +30,28 @@ export default async function handler(req, res) {
     // Outseta enforces a 25-record page size regardless of the limit param.
     // Use "fetch until short page" pagination — no dependency on metadata.total.
     const PAGE_SIZE = 25;
-let people = [];
-let lastUid = null;
-let keepGoing = true;
 
-while (keepGoing) {
-  let url = `${base}/crm/people?$top=${PAGE_SIZE}&fields=${fields}`;
+// page 1
+const firstRes = await fetch(
+  `${base}/crm/people?$top=${PAGE_SIZE}&fields=${fields}`,
+  { headers: { Authorization: auth } }
+);
+const firstData = await firstRes.json();
+const firstItems = firstData.items || [];
+const lastUid = firstItems[firstItems.length - 1]?.Uid || null;
 
-  if (lastUid) {
-    url += `&$filter=Uid gt '${lastUid}'`;
-  }
-
-  const pageRes = await fetch(url, {
-    headers: { Authorization: auth }
-  });
-
-  const pageData = await pageRes.json();
-  const pageItems = pageData.items || [];
-
-  if (!pageItems.length) break;
-
-  people = people.concat(pageItems);
-  lastUid = pageItems[pageItems.length - 1].Uid;
-
-  if (pageItems.length < PAGE_SIZE) {
-    keepGoing = false;
-  }
+// page 2 test
+let secondItems = [];
+if (lastUid) {
+  const secondRes = await fetch(
+    `${base}/crm/people?$top=${PAGE_SIZE}&fields=${fields}&$filter=Uid gt '${lastUid}'`,
+    { headers: { Authorization: auth } }
+  );
+  const secondData = await secondRes.json();
+  secondItems = secondData.items || [];
 }
 
-    const uniquePeople = [];
-const seenUids = new Set();
-
-people.forEach(function (p) {
-  if (!p || !p.Uid) return;
-  if (seenUids.has(p.Uid)) return;
-  seenUids.add(p.Uid);
-  uniquePeople.push(p);
-});
+const uniquePeople = firstItems;
 
 const merged = uniquePeople.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
@@ -109,8 +94,12 @@ const merged = uniquePeople.map(function (p) {
   items: merged,
   debug: {
     count: merged.length,
-    firstUid: merged[0]?.Uid || null,
-    lastUid: merged[merged.length - 1]?.Uid || null
+    firstPageCount: firstItems.length,
+    firstPageFirstUid: firstItems[0]?.Uid || null,
+    firstPageLastUid: firstItems[firstItems.length - 1]?.Uid || null,
+    secondPageCount: secondItems.length,
+    secondPageFirstUid: secondItems[0]?.Uid || null,
+    secondPageLastUid: secondItems[secondItems.length - 1]?.Uid || null
   }
 };
     cachedData = payload;
