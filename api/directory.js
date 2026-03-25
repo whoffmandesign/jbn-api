@@ -34,17 +34,18 @@ export default async function handler(req, res) {
     let offset = 0;
 
     while (true) {
-      const pageRes = await fetch(
-        `${base}/crm/people?limit=${PAGE_SIZE}&offset=${offset}&fields=${fields}`,
-        { headers: { Authorization: auth } }
-      );
+      const url = `${base}/crm/people?limit=${PAGE_SIZE}&offset=${offset}&fields=${fields}`;
+      console.log(`[pagination] Fetching offset=${offset}: ${url}`);
+      const pageRes = await fetch(url, { headers: { Authorization: auth } });
       const pageData = await pageRes.json();
       const pageItems = pageData.items || [];
+      console.log(`[pagination] offset=${offset} → got ${pageItems.length} items (metadata.total=${pageData.metadata?.total ?? 'n/a'})`);
       people = people.concat(pageItems);
       // If we got fewer records than a full page, we've reached the last page
       if (pageItems.length < PAGE_SIZE) break;
       offset += pageItems.length;
     }
+    console.log(`[pagination] Done — total people fetched: ${people.length}`);
 
     const merged = people.map(function (p) {
       const personAccount = p.PersonAccount && p.PersonAccount[0];
