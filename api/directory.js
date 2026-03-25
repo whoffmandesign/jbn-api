@@ -3,12 +3,17 @@
 // Fetches all members from Outseta CRM and returns a merged, cleaned array.
 // Includes in-memory caching (5 min TTL) and paginated fetching to support
 // any member count without silent truncation.
+//
+// ⚠️ OUTSETA PAGINATION QUIRK:
+//   offset = PAGE INDEX (0, 1, 2…) — NOT a record skip value.
+//   Use metadata.total to calculate total pages and loop accordingly.
+//   DO NOT use /crm/accounts — that endpoint returns person fields as null.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // In-memory cache — persists across warm Vercel function invocations
 let cachedData = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://www.jbnphilly.com');
@@ -17,117 +22,84 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  // Return cached response if still fresh — avoids hitting Outseta on every load
+  // Return cached response if still fresh
   if (cachedData && (Date.now() - cacheTimestamp < CACHE_TTL)) {
     return res.status(200).json(cachedData);
   }
 
   const auth = 'Outseta ' + process.env.OUTSETA_API_KEY + ':' + process.env.OUTSETA_API_SECRET;
   const base = 'https://jbnphilly.outseta.com/api/v1';
-const fields = '*';
+  const PAGE_SIZE = 25;
+  const fields = 'Uid,FirstName,LastName,Title,Email,ProfileImageS3Url,Tags,PersonAccount,PersonAccount.Account.*,Bio,CompanyName,City,State,Country,DirectoryCategories,DirectoryRole,LinkedInUrl,Website,PhoneNumber,PublicDirectoryListing,MembershipStatus,AvailabilityStatus';
+
   try {
-    // Outseta enforces a 25-record page size regardless of the limit param.
-    // Use "fetch until short page" pagination — no dependency on metadata.total.
-    const PAGE_SIZE = 25;
-const firstRes = await fetch(
-  `${base}/crm/accounts?limit=${PAGE_SIZE}&offset=0`,
-  { headers: { Authorization: auth } }
-);
-const firstData = await firstRes.json();
-const total = firstData.metadata?.total || 0;
-const totalPages = Math.ceil(total / PAGE_SIZE);
+    // Fetch first page + read total count from metadata
+    const firstRes = await fetch(
+      `${base}/crm/people?limit=${PAGE_SIZE}&offset=0&fields=${fields}`,
+      { headers: { Authorization: auth } }
+    );
+    const firstData = await firstRes.json();
+    const total = firstData.metadata?.total || 0;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
-let people = firstData.items || [];
+    let people = firstData.items || [];
 
-for (let page = 1; page < totalPages; page++) {
-  const pageRes = await fetch(
-    `${base}/crm/accounts?limit=${PAGE_SIZE}&offset=${page}`,
-    { headers: { Authorization: auth } }
-  );
-  const pageData = await pageRes.json();
-  const pageItems = pageData.items || [];
-  people = people.concat(pageItems);
-}
+    // Fetch remaining pages — offset is page index, not record skip
+    for (let page = 1; page < totalPages; page++) {
+      const pageRes = await fetch(
+        `${base}/crm/people?limit=${PAGE_SIZE}&offset=${page}&fields=${fields}`,
+        { headers: { Authorization: auth } }
+      );
+      const pageItems = (await pageRes.json()).items || [];
+      people = people.concat(pageItems);
+    }
 
-const uniquePeople = [];
-const seenUids = new Set();
+    // Deduplicate by Uid — safety net against any repeated pages
+    const uniquePeople = [];
+    const seenUids = new Set();
+    people.forEach(function(p) {
+      if (!p || !p.Uid) return;
+      if (seenUids.has(p.Uid)) return;
+      seenUids.add(p.Uid);
+      uniquePeople.push(p);
+    });
 
-people.forEach(function (p) {
-  if (!p || !p.Uid) return;
-  if (seenUids.has(p.Uid)) return;
-  seenUids.add(p.Uid);
-  uniquePeople.push(p);
-});
+    const merged = uniquePeople.map(function(p) {
+      const personAccount = p.PersonAccount && p.PersonAccount[0];
+      const account = personAccount && personAccount.Account;
 
-const MENTOR_PLAN_UID = '1Qpekp9E';
+      // Base64-encode email to avoid exposing it in frontend HTML
+      const emailB64 = p.Email
+        ? Buffer.from(String(p.Email), 'utf8').toString('base64')
+        : null;
 
-const merged = uniquePeople.map(function (p) {
-  const personAccount = p.PersonAccount && p.PersonAccount[0];
-  const account = personAccount && personAccount.Account;
+      return {
+        Uid: p.Uid,
+        FirstName: p.FirstName,
+        LastName: p.LastName,
+        Title: p.Title,
+        ProfileImageS3Url: p.ProfileImageS3Url,
+        Tags: p.Tags || [],
+        Bio: p.Bio || null,
+        CompanyName: p.CompanyName || null,
+        City: p.City || null,
+        State: p.State || null,
+        Country: p.Country || null,
+        DirectoryCategories: p.DirectoryCategories || null,
+        // DirectoryRole drives mentor detection in the frontend (Plan UID is unreliable)
+        DirectoryRole: p.DirectoryRole || null,
+        LinkedInUrl: p.LinkedInUrl || null,
+        Website: p.Website || null,
+        PhoneNumber: p.PhoneNumber || null,
+        // Preserve false values — don't coerce with || null
+        PublicDirectoryListing: p.PublicDirectoryListing !== undefined ? p.PublicDirectoryListing : null,
+        MembershipStatus: p.MembershipStatus || null,
+        AvailabilityStatus: p.AvailabilityStatus || null,
+        EmailB64: emailB64,
+        Account: account || null
+      };
+    });
 
-  const planUid =
-    (account && (
-      (account.PrimarySubscription && account.PrimarySubscription.Plan && account.PrimarySubscription.Plan.Uid) ||
-      (account.LatestSubscription && account.LatestSubscription.Plan && account.LatestSubscription.Plan.Uid) ||
-      (account.Subscriptions && account.Subscriptions.length > 0 &&
-        account.Subscriptions[0].Plan &&
-        account.Subscriptions[0].Plan.Uid
-      ) ||
-      (account.CurrentSubscription && (
-        account.CurrentSubscription.PlanUid ||
-        account.CurrentSubscription.PlanUID ||
-        (account.CurrentSubscription.Plan && account.CurrentSubscription.Plan.Uid)
-      )) ||
-      (account.Plan && account.Plan.Uid)
-    )) ||
-    (personAccount && (
-      personAccount.PlanUid ||
-      personAccount.PlanUID ||
-      personAccount.BillingPlanUid ||
-      personAccount.SubscriptionPlanUid
-    )) ||
-    null;
-
-  const isMentorByPlan = planUid === MENTOR_PLAN_UID;
-
-  const isMentorByTag = (p.Tags || []).some(function (tag) {
-    return String(tag || '').trim().toLowerCase() === 'mentor';
-  });
-
-  const emailB64 = p.Email
-    ? Buffer.from(String(p.Email), 'utf8').toString('base64')
-    : null;
-
-  return {
-    Uid: p.Uid,
-    FirstName: p.FirstName,
-    LastName: p.LastName,
-    Title: p.Title,
-    ProfileImageS3Url: p.ProfileImageS3Url,
-    Tags: p.Tags || [],
-    Bio: p.Bio || null,
-    CompanyName: p.CompanyName || null,
-    City: p.City || null,
-    State: p.State || null,
-    Country: p.Country || null,
-    DirectoryCategories: p.DirectoryCategories || null,
-    DirectoryRole: p.DirectoryRole || null,
-    LinkedInUrl: p.LinkedInUrl || null,
-    Website: p.Website || null,
-    PhoneNumber: p.PhoneNumber || null,
-    PublicDirectoryListing: p.PublicDirectoryListing || null,
-    MembershipStatus: p.MembershipStatus || null,
-    AvailabilityStatus: p.AvailabilityStatus || null,
-
-    EmailB64: emailB64,
-    Account: account || null,
-
-    PlanUid: planUid,
-    IsMentor: isMentorByPlan || isMentorByTag
-  };
-});
-
-    // Store result in cache before returning
     const payload = { items: merged };
     cachedData = payload;
     cacheTimestamp = Date.now();
