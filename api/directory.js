@@ -60,41 +60,67 @@ people.forEach(function (p) {
   uniquePeople.push(p);
 });
 
+const MENTOR_PLAN_UID = '1Qpekp9E';
+
 const merged = uniquePeople.map(function (p) {
-      const personAccount = p.PersonAccount && p.PersonAccount[0];
-      const account = personAccount && personAccount.Account;
+  const personAccount = p.PersonAccount && p.PersonAccount[0];
+  const account = personAccount && personAccount.Account;
 
-      // Base64 encode email so it isn't exposed in plain HTML/source
-      const emailB64 = p.Email
-        ? Buffer.from(String(p.Email), 'utf8').toString('base64')
-        : null;
+  // Extract plan UID safely
+  const planUid =
+    (personAccount && (
+      personAccount.PlanUid ||
+      personAccount.PlanUID ||
+      personAccount.BillingPlanUid ||
+      personAccount.SubscriptionPlanUid
+    )) ||
+    (account && (
+      account.PlanUid ||
+      account.PlanUID ||
+      account.BillingPlanUid ||
+      account.SubscriptionPlanUid ||
+      (account.CurrentSubscription && (
+        account.CurrentSubscription.PlanUid ||
+        account.CurrentSubscription.PlanUID ||
+        (account.CurrentSubscription.Plan && account.CurrentSubscription.Plan.Uid)
+      )) ||
+      (account.Plan && account.Plan.Uid)
+    )) ||
+    null;
 
-      return {
-        Uid: p.Uid,
-        FirstName: p.FirstName,
-        LastName: p.LastName,
-        Title: p.Title,
-        ProfileImageS3Url: p.ProfileImageS3Url,
-        Tags: p.Tags || [],
-        Bio: p.Bio || null,
-        CompanyName: p.CompanyName || null,
-        City: p.City || null,
-        State: p.State || null,
-        Country: p.Country || null,
-        DirectoryCategories: p.DirectoryCategories || null,
-        LinkedInUrl: p.LinkedInUrl || null,
-        Website: p.Website || null,
-        PhoneNumber: p.PhoneNumber || null,
-        PublicDirectoryListing: p.PublicDirectoryListing || null,
-        MembershipStatus: p.MembershipStatus || null,
-        AvailabilityStatus: p.AvailabilityStatus || null,
+  const emailB64 = p.Email
+    ? Buffer.from(String(p.Email), 'utf8').toString('base64')
+    : null;
 
-        // Used by the profile page email button
-        EmailB64: emailB64,
+  return {
+    Uid: p.Uid,
+    FirstName: p.FirstName,
+    LastName: p.LastName,
+    Title: p.Title,
+    ProfileImageS3Url: p.ProfileImageS3Url,
+    Tags: p.Tags || [],
+    Bio: p.Bio || null,
+    CompanyName: p.CompanyName || null,
+    City: p.City || null,
+    State: p.State || null,
+    Country: p.Country || null,
+    DirectoryCategories: p.DirectoryCategories || null,
+    LinkedInUrl: p.LinkedInUrl || null,
+    Website: p.Website || null,
+    PhoneNumber: p.PhoneNumber || null,
+    PublicDirectoryListing: p.PublicDirectoryListing || null,
+    MembershipStatus: p.MembershipStatus || null,
+    AvailabilityStatus: p.AvailabilityStatus || null,
 
-        Account: account || null
-      };
-    });
+    EmailB64: emailB64,
+
+    Account: account || null,
+
+    // 👇 NEW
+    PlanUid: planUid,
+    IsMentor: planUid === MENTOR_PLAN_UID
+  };
+});
 
     // Store result in cache before returning
     const payload = { items: merged };
