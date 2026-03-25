@@ -42,12 +42,13 @@ const lastUid = firstItems[firstItems.length - 1]?.Uid || null;
 
 // page 2 test
 let secondItems = [];
+let secondData = null;
 if (lastUid) {
   const secondRes = await fetch(
   `${base}/crm/people?limit=${PAGE_SIZE}&offset=${PAGE_SIZE}&fields=${fields}`,
   { headers: { Authorization: auth } }
 );
-  const secondData = await secondRes.json();
+  secondData = await secondRes.json();
   secondItems = secondData.items || [];
 }
 
@@ -95,12 +96,11 @@ const merged = uniquePeople.map(function (p) {
   debug: {
     count: merged.length,
     firstPageCount: firstItems.length,
-    firstPageFirstUid: firstItems[0]?.Uid || null,
-    firstPageLastUid: firstItems[firstItems.length - 1]?.Uid || null,
+    firstMetadata: firstData.metadata || null,
     secondPageCount: secondItems.length,
-    secondPageFirstUid: secondItems[0]?.Uid || null,
-    secondPageLastUid: secondItems[secondItems.length - 1]?.Uid || null,
-    metadata: firstData.metadata || null
+    secondMetadata: secondData?.metadata || null,
+    secondRawKeys: secondData ? Object.keys(secondData) : [],
+    secondError: secondData?.error || null
   }
 };
     cachedData = payload;
