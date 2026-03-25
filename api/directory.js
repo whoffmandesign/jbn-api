@@ -30,21 +30,33 @@ export default async function handler(req, res) {
     // Outseta enforces a 25-record page size regardless of the limit param.
     // Use "fetch until short page" pagination — no dependency on metadata.total.
     const PAGE_SIZE = 25;
-    let people = [];
-    let offset = 0;
+let people = [];
+let lastUid = null;
+let keepGoing = true;
 
-    while (true) {
-      const pageRes = await fetch(
-  `${base}/crm/people?$top=${PAGE_SIZE}&$skip=${offset}&fields=${fields}`,
-  { headers: { Authorization: auth } }
-);
-      const pageData = await pageRes.json();
-      const pageItems = pageData.items || [];
-      people = people.concat(pageItems);
-      // If we got fewer records than a full page, we've reached the last page
-      if (pageItems.length < PAGE_SIZE) break;
-      offset += pageItems.length;
-    }
+while (keepGoing) {
+  let url = `${base}/crm/people?$top=${PAGE_SIZE}&fields=${fields}`;
+
+  if (lastUid) {
+    url += `&$filter=Uid gt '${lastUid}'`;
+  }
+
+  const pageRes = await fetch(url, {
+    headers: { Authorization: auth }
+  });
+
+  const pageData = await pageRes.json();
+  const pageItems = pageData.items || [];
+
+  if (!pageItems.length) break;
+
+  people = people.concat(pageItems);
+  lastUid = pageItems[pageItems.length - 1].Uid;
+
+  if (pageItems.length < PAGE_SIZE) {
+    keepGoing = false;
+  }
+}
 
     const uniquePeople = [];
 const seenUids = new Set();
@@ -93,7 +105,7 @@ const merged = uniquePeople.map(function (p) {
     });
 
     // Store result in cache before returning
-    const payload = { debug: 'v2-test', items: merged };
+    const payload = { items: merged };
     cachedData = payload;
     cacheTimestamp = Date.now();
     res.status(200).json(payload);
