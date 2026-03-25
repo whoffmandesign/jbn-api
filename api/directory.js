@@ -127,7 +127,7 @@ const merged = uniquePeople.map(function (p) {
 });
 
     // Store result in cache before returning
-    const payload = { items: merged };
+    const payload = { items: uniquePeople };
     cachedData = payload;
     cacheTimestamp = Date.now();
     res.status(200).json(payload);
