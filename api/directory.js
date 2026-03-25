@@ -65,19 +65,14 @@ const merged = uniquePeople.map(function (p) {
   const personAccount = p.PersonAccount && p.PersonAccount[0];
   const account = personAccount && personAccount.Account;
 
-  // Extract plan UID safely
   const planUid =
-    (personAccount && (
-      personAccount.PlanUid ||
-      personAccount.PlanUID ||
-      personAccount.BillingPlanUid ||
-      personAccount.SubscriptionPlanUid
-    )) ||
     (account && (
-      account.PlanUid ||
-      account.PlanUID ||
-      account.BillingPlanUid ||
-      account.SubscriptionPlanUid ||
+      (account.PrimarySubscription && account.PrimarySubscription.Plan && account.PrimarySubscription.Plan.Uid) ||
+      (account.LatestSubscription && account.LatestSubscription.Plan && account.LatestSubscription.Plan.Uid) ||
+      (account.Subscriptions && account.Subscriptions.length > 0 &&
+        account.Subscriptions[0].Plan &&
+        account.Subscriptions[0].Plan.Uid
+      ) ||
       (account.CurrentSubscription && (
         account.CurrentSubscription.PlanUid ||
         account.CurrentSubscription.PlanUID ||
@@ -85,7 +80,19 @@ const merged = uniquePeople.map(function (p) {
       )) ||
       (account.Plan && account.Plan.Uid)
     )) ||
+    (personAccount && (
+      personAccount.PlanUid ||
+      personAccount.PlanUID ||
+      personAccount.BillingPlanUid ||
+      personAccount.SubscriptionPlanUid
+    )) ||
     null;
+
+  const isMentorByPlan = planUid === MENTOR_PLAN_UID;
+
+  const isMentorByTag = (p.Tags || []).some(function (tag) {
+    return String(tag || '').trim().toLowerCase() === 'mentor';
+  });
 
   const emailB64 = p.Email
     ? Buffer.from(String(p.Email), 'utf8').toString('base64')
@@ -112,12 +119,10 @@ const merged = uniquePeople.map(function (p) {
     AvailabilityStatus: p.AvailabilityStatus || null,
 
     EmailB64: emailB64,
-
     Account: account || null,
 
-    // 👇 NEW
     PlanUid: planUid,
-    IsMentor: planUid === MENTOR_PLAN_UID
+    IsMentor: isMentorByPlan || isMentorByTag
   };
 });
 
