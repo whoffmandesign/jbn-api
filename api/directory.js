@@ -35,9 +35,9 @@ export default async function handler(req, res) {
 
     while (true) {
       const pageRes = await fetch(
-        `${base}/crm/people?$top=${PAGE_SIZE}&$skip=${offset}&fields=${fields}`
-        { headers: { Authorization: auth } }
-      );
+  `${base}/crm/people?$top=${PAGE_SIZE}&$skip=${offset}&fields=${fields}`,
+  { headers: { Authorization: auth } }
+);
       const pageData = await pageRes.json();
       const pageItems = pageData.items || [];
       people = people.concat(pageItems);
